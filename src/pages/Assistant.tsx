@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MessageSquare, Send, Bot, Info } from "lucide-react";
+import { MessageSquare, Send, Bot, Info, AlertTriangle } from "lucide-react";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getAzureOpenAIResponse } from '@/services/azureOpenAI';
+import { debug, error, info, getLogs, exportLogs } from '@/utils/logger';
+import { toast } from 'sonner';
 
 interface Message {
   id: number;
   content: string;
-  sender: 'user' | 'ai';
+  sender: 'user' | 'ai' | 'system';
   timestamp: Date;
 }
 
@@ -24,6 +26,43 @@ export default function Assistant() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'error' | 'checking'>('checking');
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+  
+  // Check connection status on component mount
+  useEffect(() => {
+    checkConnectionStatus();
+  }, []);
+  
+  const checkConnectionStatus = async () => {
+    try {
+      debug('Checking connection status');
+      // Simple ping to check if we can connect to Azure OpenAI
+      const testResponse = await getAzureOpenAIResponse('ping');
+      if (testResponse) {
+        info('Connection test successful');
+        setConnectionStatus('connected');
+      } else {
+        error('Connection test failed - empty response');
+        setConnectionStatus('error');
+        addSystemMessage("Warning: Unable to connect to AI service. Please check your settings.");
+      }
+    } catch (err) {
+      error('Connection test failed with error', err);
+      setConnectionStatus('error');
+      addSystemMessage("Warning: Unable to connect to AI service. Please check your settings.");
+    }
+  };
+  
+  const addSystemMessage = (content: string) => {
+    const systemMessage: Message = {
+      id: messages.length + 1,
+      content,
+      sender: 'system',
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, systemMessage]);
+  };
   
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -36,13 +75,20 @@ export default function Assistant() {
       timestamp: new Date()
     };
     
+    debug('Sending user message', { messageId: userMessage.id, content: input });
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
     
     try {
       // Get response from Azure OpenAI
+      info('Requesting AI response');
       const aiResponse = await getAzureOpenAIResponse(input);
+      
+      if (!aiResponse) {
+        throw new Error('Empty response received from AI service');
+      }
+      
       const aiMessage: Message = {
         id: messages.length + 2,
         content: aiResponse,
@@ -50,14 +96,19 @@ export default function Assistant() {
         timestamp: new Date()
       };
       
+      info('AI response received', { messageId: aiMessage.id, contentLength: aiResponse.length });
       setMessages(prev => [...prev, aiMessage]);
-    } catch (error) {
-      console.error('Error getting AI response:', error);
+    } catch (err: any) {
+      error('Error getting AI response', { 
+        error: err.message || 'Unknown error',
+        stack: err.stack
+      });
+      
       // Add error message
       const errorMessage: Message = {
         id: messages.length + 2,
-        content: "I'm sorry, I encountered an error while processing your request. Please try again later.",
-        sender: 'ai',
+        content: "I'm sorry, I encountered an error while processing your request. Please try again later or check the debug panel for more information.",
+        sender: 'system',
         timestamp: new Date()
       };
       
@@ -78,14 +129,93 @@ export default function Assistant() {
     }
   };
   
+  const toggleDebugPanel = () => {
+    setShowDebugPanel(prev => !prev);
+    if (!showDebugPanel) {
+      debug('Debug panel opened');
+    }
+  };
+  
+  const copyLogs = () => {
+    const logsText = exportLogs();
+    navigator.clipboard.writeText(logsText)
+      .then(() => {
+        toast.success('Logs copied to clipboard');
+        debug('Logs copied to clipboard');
+      })
+      .catch(err => {
+        toast.error('Failed to copy logs');
+        error('Failed to copy logs', err);
+      });
+  };
+  
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">AI Assistant</h2>
-        <p className="text-muted-foreground">
-          Your intelligent assistant for solutions development
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">AI Assistant</h2>
+          <p className="text-muted-foreground">
+            Your intelligent assistant for solutions development
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className={`h-3 w-3 rounded-full ${
+            connectionStatus === 'connected' ? 'bg-green-500' : 
+            connectionStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+          }`}></div>
+          <span className="text-sm text-muted-foreground">
+            {connectionStatus === 'connected' ? 'Connected' : 
+             connectionStatus === 'error' ? 'Connection Error' : 'Checking...'}
+          </span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={toggleDebugPanel}
+            className="ml-2"
+          >
+            {showDebugPanel ? 'Hide Debug' : 'Show Debug'}
+          </Button>
+        </div>
       </div>
+      
+      {showDebugPanel && (
+        <Card className="bg-slate-950 text-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex justify-between items-center">
+              <span>Debug Panel</span>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={copyLogs}
+                className="text-slate-200 hover:text-white hover:bg-slate-800"
+              >
+                Copy Logs
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[200px]">
+              <pre className="text-xs font-mono">
+                {getLogs().map((log, index) => (
+                  <div key={index} className={`py-1 ${
+                    log.level === 'ERROR' ? 'text-red-400' :
+                    log.level === 'WARN' ? 'text-yellow-400' :
+                    log.level === 'INFO' ? 'text-blue-400' :
+                    'text-slate-400'
+                  }`}>
+                    [{log.timestamp}] [{log.level}] {log.message}
+                    {log.data && (
+                      <div className="pl-4 text-slate-500">
+                        {JSON.stringify(log.data, null, 2)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </pre>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="md:col-span-3">
@@ -104,19 +234,34 @@ export default function Assistant() {
                 {messages.map(message => (
                   <div 
                     key={message.id}
-                    className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${
+                      message.sender === 'user' ? 'justify-end' : 
+                      message.sender === 'system' ? 'justify-center' : 'justify-start'
+                    }`}
                   >
                     <div 
-                      className={`max-w-[80%] rounded-lg p-4 ${
+                      className={`${
                         message.sender === 'user' 
-                          ? 'bg-portal-primary text-white' 
-                          : 'bg-muted'
+                          ? 'max-w-[80%] bg-portal-primary text-white rounded-lg p-4' : 
+                        message.sender === 'system'
+                          ? 'max-w-[90%] bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 flex items-start gap-2'
+                          : 'max-w-[80%] bg-muted rounded-lg p-4'
                       }`}
                     >
-                      <p className="text-sm">{message.content}</p>
-                      <p className={`text-xs mt-1 ${message.sender === 'user' ? 'text-blue-100' : 'text-muted-foreground'}`}>
-                        {formatTimestamp(message.timestamp)}
-                      </p>
+                      {message.sender === 'system' && (
+                        <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                      )}
+                      <div>
+                        <p className={`${message.sender === 'system' ? 'text-sm' : 'text-sm'}`}>
+                          {message.content}
+                        </p>
+                        <p className={`text-xs mt-1 ${
+                          message.sender === 'user' ? 'text-blue-100' : 
+                          message.sender === 'system' ? 'text-amber-600' : 'text-muted-foreground'
+                        }`}>
+                          {formatTimestamp(message.timestamp)}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -124,9 +269,9 @@ export default function Assistant() {
                   <div className="flex justify-start">
                     <div className="max-w-[80%] rounded-lg p-4 bg-muted">
                       <p className="text-sm flex items-center gap-2">
-                        <span className="animate-pulse">●</span>
-                        <span className="animate-pulse delay-100">●</span>
-                        <span className="animate-pulse delay-200">●</span>
+                        <span className="animate-pulse">•</span>
+                        <span className="animate-pulse delay-100">•</span>
+                        <span className="animate-pulse delay-200">•</span>
                       </p>
                     </div>
                   </div>
@@ -141,11 +286,11 @@ export default function Assistant() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 className="flex-1"
-                disabled={isLoading}
+                disabled={isLoading || connectionStatus === 'error'}
               />
               <Button 
                 onClick={handleSendMessage}
-                disabled={!input.trim() || isLoading}
+                disabled={!input.trim() || isLoading || connectionStatus === 'error'}
                 className="bg-portal-secondary hover:bg-portal-secondary/90"
               >
                 {isLoading ? (
