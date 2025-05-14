@@ -9,8 +9,7 @@ interface ChatMessage {
 
 interface ChatCompletionRequest {
   messages: ChatMessage[];
-  max_tokens?: number;
-  temperature?: number;
+  max_completion_tokens?: number;
   top_p?: number;
   frequency_penalty?: number;
   presence_penalty?: number;
@@ -68,14 +67,13 @@ export const getAzureOpenAIResponse = async (userMessage: string): Promise<strin
 
     const requestBody: ChatCompletionRequest = {
       messages,
-      max_tokens: 800,
-      temperature: 0.7,
+      max_completion_tokens: 800
     };
 
     debug('Sending request to Azure OpenAI', { 
       deploymentName, 
       messageCount: messages.length,
-      requestConfig: { max_tokens: requestBody.max_tokens, temperature: requestBody.temperature }
+      requestConfig: { max_completion_tokens: requestBody.max_completion_tokens }
     });
 
     const response = await axios.post<ChatCompletionResponse>(
