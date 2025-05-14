@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { MessageSquare, Send, Bot, Info } from "lucide-react";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getAzureOpenAIResponse } from '@/services/azureOpenAI';
 
 interface Message {
   id: number;
@@ -23,9 +23,10 @@ export default function Assistant() {
     }
   ]);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
-  const handleSendMessage = () => {
-    if (!input.trim()) return;
+  const handleSendMessage = async () => {
+    if (!input.trim() || isLoading) return;
     
     // Add user message
     const userMessage: Message = {
@@ -37,10 +38,11 @@ export default function Assistant() {
     
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setIsLoading(true);
     
-    // Simulate AI response (in a real app, this would call an API)
-    setTimeout(() => {
-      const aiResponse = getAIResponse(input);
+    try {
+      // Get response from Azure OpenAI
+      const aiResponse = await getAzureOpenAIResponse(input);
       const aiMessage: Message = {
         id: messages.length + 2,
         content: aiResponse,
@@ -49,25 +51,19 @@ export default function Assistant() {
       };
       
       setMessages(prev => [...prev, aiMessage]);
-    }, 1000);
-  };
-  
-  const getAIResponse = (userInput: string): string => {
-    // Simple response logic - in a real app this would be replaced with an actual API call
-    const input = userInput.toLowerCase();
-    
-    if (input.includes('project') && input.includes('create')) {
-      return "I can help you create a new project! To get started, go to the Projects page and click on 'New Project'. You'll need to specify key information like the project name, description, and team members.";
-    } else if (input.includes('servicenow') || input.includes('service now')) {
-      return "Our platform integrates with ServiceNow to sync project data. Each project in our system has a corresponding ServiceNow ID that keeps information synchronized between systems. You can view these IDs in the project details.";
-    } else if (input.includes('document') && (input.includes('create') || input.includes('new'))) {
-      return "You can create new documents in the Document Foundry. We support knowledge base articles, Word documents, PDFs, and PowerPoint presentations. You can also link documents to specific projects as deliverables or supporting materials.";
-    } else if (input.includes('idea')) {
-      return "The Ideas Portal is where you can submit and explore new ideas for managed services. Our AI can help you develop your ideas further by suggesting features, implementation approaches, or potential challenges to consider.";
-    } else if (input.includes('calendar') || input.includes('schedule')) {
-      return "The Team Calendar shows all important dates, including project launches, deadlines, and scheduled meetings. You can filter events by project or event type to focus on what's relevant to you.";
-    } else {
-      return "I'm here to help with managing projects, creating documents, developing ideas, and other aspects of solutions development. Could you provide more details about what you need assistance with?";
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      // Add error message
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        content: "I'm sorry, I encountered an error while processing your request. Please try again later.",
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -124,6 +120,17 @@ export default function Assistant() {
                     </div>
                   </div>
                 ))}
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[80%] rounded-lg p-4 bg-muted">
+                      <p className="text-sm flex items-center gap-2">
+                        <span className="animate-pulse">●</span>
+                        <span className="animate-pulse delay-100">●</span>
+                        <span className="animate-pulse delay-200">●</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </ScrollArea>
             
@@ -134,13 +141,18 @@ export default function Assistant() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 className="flex-1"
+                disabled={isLoading}
               />
               <Button 
                 onClick={handleSendMessage}
-                disabled={!input.trim()}
+                disabled={!input.trim() || isLoading}
                 className="bg-portal-secondary hover:bg-portal-secondary/90"
               >
-                <Send className="h-4 w-4" />
+                {isLoading ? (
+                  <span className="animate-spin">◌</span>
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </CardContent>

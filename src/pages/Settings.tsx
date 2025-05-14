@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,11 +6,20 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { getAzureOpenAIConfig, saveAzureOpenAIConfig } from "@/utils/envConfig";
+import { toast } from "sonner";
 
 export default function Settings() {
   const [apiKeys, setApiKeys] = useState({
     serviceNow: '••••••••••••••••••••••••••••••',
-    openai: '••••••••••••••••••••••••••••••'
+    openai: '••••••••••••••••••••••••••••••',
+    azureOpenAI: '••••••••••••••••••••••••••••••'
+  });
+  
+  const [azureConfig, setAzureConfig] = useState({
+    endpoint: 'https://your-resource-name.openai.azure.com/',
+    deploymentName: 'your-deployment-name',
+    apiVersion: '2023-05-15'
   });
   
   const [integrations, setIntegrations] = useState({
@@ -29,9 +37,45 @@ export default function Settings() {
     calendarReminders: true
   });
   
+  // Load Azure OpenAI config on component mount
+  useEffect(() => {
+    const config = getAzureOpenAIConfig();
+    if (config.apiKey) {
+      setApiKeys(prev => ({ ...prev, azureOpenAI: config.apiKey }));
+    }
+    if (config.endpoint) {
+      setAzureConfig(prev => ({ 
+        ...prev, 
+        endpoint: config.endpoint,
+        deploymentName: config.deploymentName,
+        apiVersion: config.apiVersion
+      }));
+    }
+  }, []);
+  
   const handleSaveApiKey = (key: keyof typeof apiKeys) => {
     // In a real app, this would make an API call to save the key
     console.log(`Saving ${key} API key`);
+    
+    if (key === 'azureOpenAI') {
+      const config = getAzureOpenAIConfig();
+      saveAzureOpenAIConfig({
+        ...config,
+        apiKey: apiKeys.azureOpenAI
+      });
+      toast.success('Azure OpenAI API key saved');
+    }
+  };
+  
+  const handleSaveAzureConfig = () => {
+    // Save Azure OpenAI configuration to local storage
+    saveAzureOpenAIConfig({
+      apiKey: apiKeys.azureOpenAI,
+      endpoint: azureConfig.endpoint,
+      deploymentName: azureConfig.deploymentName,
+      apiVersion: azureConfig.apiVersion
+    });
+    toast.success('Azure OpenAI configuration saved');
   };
   
   const handleToggleIntegration = (integration: keyof typeof integrations) => {
@@ -115,6 +159,73 @@ export default function Settings() {
                 <p className="text-xs text-muted-foreground mt-1">
                   Powers AI features in the Ideas Portal and AI Assistant
                 </p>
+              </div>
+              
+              <Separator className="my-4" />
+              
+              <div>
+                <h3 className="font-medium mb-3">Azure OpenAI Configuration</h3>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="azure-openai-api-key">Azure OpenAI API Key</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        id="azure-openai-api-key" 
+                        value={apiKeys.azureOpenAI} 
+                        onChange={(e) => setApiKeys(prev => ({ ...prev, azureOpenAI: e.target.value }))}
+                        type="password"
+                        className="flex-1"
+                      />
+                      <Button 
+                        variant="outline" 
+                        onClick={() => handleSaveApiKey('azureOpenAI')}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="azure-openai-endpoint">Azure OpenAI Endpoint</Label>
+                    <Input 
+                      id="azure-openai-endpoint" 
+                      value={azureConfig.endpoint} 
+                      onChange={(e) => setAzureConfig(prev => ({ ...prev, endpoint: e.target.value }))}
+                      placeholder="https://your-resource-name.openai.azure.com/"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="azure-openai-deployment">Deployment Name</Label>
+                    <Input 
+                      id="azure-openai-deployment" 
+                      value={azureConfig.deploymentName} 
+                      onChange={(e) => setAzureConfig(prev => ({ ...prev, deploymentName: e.target.value }))}
+                      placeholder="your-deployment-name"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="azure-openai-version">API Version</Label>
+                    <Input 
+                      id="azure-openai-version" 
+                      value={azureConfig.apiVersion} 
+                      onChange={(e) => setAzureConfig(prev => ({ ...prev, apiVersion: e.target.value }))}
+                      placeholder="2023-05-15"
+                    />
+                  </div>
+                  
+                  <Button 
+                    onClick={handleSaveAzureConfig}
+                    className="w-full"
+                  >
+                    Save Azure Configuration
+                  </Button>
+                  
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Azure OpenAI is used for the AI Assistant feature. These settings will be stored in your browser.
+                  </p>
+                </div>
               </div>
               
               <div className="pt-4">

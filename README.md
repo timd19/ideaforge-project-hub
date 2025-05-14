@@ -1,73 +1,57 @@
-# Welcome to your Lovable project
+# IdeaForge Project Hub
 
-## Project info
+## Azure OpenAI Integration
 
-**URL**: https://lovable.dev/projects/a9912816-15c0-47f9-96f4-bbe9daee912b
+This application includes an AI Assistant feature that uses Azure OpenAI to provide intelligent responses. To set up the Azure OpenAI integration, follow these steps:
 
-## How can I edit this code?
+### Option 1: Environment Variables (Recommended for Development)
 
-There are several ways of editing your application.
+1. Create a `.env` file in the root directory of the project
+2. Add the following environment variables:
 
-**Use Lovable**
+```
+VITE_AZURE_OPENAI_API_KEY=your_api_key_here
+VITE_AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/
+VITE_AZURE_OPENAI_DEPLOYMENT_NAME=your_deployment_name
+VITE_AZURE_OPENAI_API_VERSION=2023-05-15
+```
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/a9912816-15c0-47f9-96f4-bbe9daee912b) and start prompting.
+3. Replace the placeholder values with your actual Azure OpenAI credentials
 
-Changes made via Lovable will be committed automatically to this repo.
+### Option 2: Settings UI (For End Users)
 
-**Use your preferred IDE**
+Users can configure their Azure OpenAI credentials directly in the application:
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. Navigate to the Settings page
+2. Go to the "API Keys" tab
+3. Scroll down to the "Azure OpenAI Configuration" section
+4. Enter your Azure OpenAI API Key, Endpoint, Deployment Name, and API Version
+5. Click "Save Azure Configuration"
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+These settings will be stored in the browser's local storage.
 
-Follow these steps:
+### Getting Azure OpenAI Credentials
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+To obtain Azure OpenAI credentials:
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+1. Create an Azure OpenAI resource in the Azure portal
+2. Deploy a model in the Azure OpenAI Studio
+3. Get your API key, endpoint, and deployment name from the Azure portal
+4. Use the latest API version (e.g., 2023-05-15)
 
-# Step 3: Install the necessary dependencies.
-npm i
+For more information, refer to the [Azure OpenAI documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/).
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+## Development
+
+To run the application locally:
+
+```bash
+# Install dependencies
+npm install
+
+# Start the development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The application will be available at http://localhost:8080.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/a9912816-15c0-47f9-96f4-bbe9daee912b) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
