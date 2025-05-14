@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,13 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   File, 
   FileText, 
-  FilePdf, 
+  File as FilePdf, 
   Plus, 
   Search, 
   Upload, 
   Download, 
   Link,
-  FileWord,
+  File as FileWord, 
   Calendar,
   MoreHorizontal
 } from "lucide-react";
