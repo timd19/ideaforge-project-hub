@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MessageSquare, Send, Bot, Info, AlertTriangle } from "lucide-react";
+import { MessageSquare, Send, Bot, Info, AlertTriangle, Zap } from "lucide-react";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { getAzureOpenAIResponse } from '@/services/azureOpenAI';
+import { getAzureOpenAIResponse, streamAzureOpenAIResponse } from '@/services/azureOpenAI';
 import { debug, error, info, getLogs, exportLogs } from '@/utils/logger';
 import { toast } from 'sonner';
 
@@ -13,6 +13,11 @@ interface Message {
   content: string;
   sender: 'user' | 'ai' | 'system';
   timestamp: Date;
+}
+
+interface ExampleQuery {
+  text: string;
+  icon?: React.ReactNode;
 }
 
 export default function Assistant() {
@@ -28,11 +33,33 @@ export default function Assistant() {
   const [isLoading, setIsLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'error' | 'checking'>('checking');
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [useStreaming, setUseStreaming] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  
+  // Example queries that can be clicked
+  const exampleQueries: ExampleQuery[] = [
+    { text: "How can I create a new project?", icon: <Zap size={14} /> },
+    { text: "Tell me about ServiceNow integration", icon: <Zap size={14} /> },
+    { text: "What document templates are available?", icon: <Zap size={14} /> },
+    { text: "How do I schedule a team meeting?", icon: <Zap size={14} /> },
+  ];
   
   // Check connection status on component mount
   useEffect(() => {
     checkConnectionStatus();
   }, []);
+  
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+  
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
   
   const checkConnectionStatus = async () => {
     try {
@@ -80,41 +107,122 @@ export default function Assistant() {
     setInput('');
     setIsLoading(true);
     
-    try {
-      // Get response from Azure OpenAI
-      info('Requesting AI response');
-      const aiResponse = await getAzureOpenAIResponse(input);
-      
-      if (!aiResponse) {
-        throw new Error('Empty response received from AI service');
-      }
-      
-      const aiMessage: Message = {
-        id: messages.length + 2,
-        content: aiResponse,
+    if (useStreaming) {
+      // Create a placeholder message for streaming
+      const streamingMessageId = messages.length + 2;
+      const streamingMessage: Message = {
+        id: streamingMessageId,
+        content: '',
         sender: 'ai',
         timestamp: new Date()
       };
       
-      info('AI response received', { messageId: aiMessage.id, contentLength: aiResponse.length });
-      setMessages(prev => [...prev, aiMessage]);
-    } catch (err: any) {
-      error('Error getting AI response', { 
-        error: err.message || 'Unknown error',
-        stack: err.stack
-      });
+      setMessages(prev => [...prev, streamingMessage]);
       
-      // Add error message
-      const errorMessage: Message = {
-        id: messages.length + 2,
-        content: "I'm sorry, I encountered an error while processing your request. Please try again later or check the debug panel for more information.",
-        sender: 'system',
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
+      try {
+        await streamAzureOpenAIResponse(
+          userMessage.content,
+          // On chunk received
+          (chunk: string) => {
+            setMessages(prev => {
+              const updatedMessages = [...prev];
+              const messageIndex = updatedMessages.findIndex(m => m.id === streamingMessageId);
+              
+              if (messageIndex !== -1) {
+                updatedMessages[messageIndex] = {
+                  ...updatedMessages[messageIndex],
+                  content: updatedMessages[messageIndex].content + chunk
+                };
+              }
+              
+              return updatedMessages;
+            });
+          },
+          // On complete
+          () => {
+            setIsLoading(false);
+            info('Streaming response completed');
+          },
+          // On error
+          (errorMessage: string) => {
+            setIsLoading(false);
+            error('Error in streaming response', { errorMessage });
+            
+            // Replace the streaming message with an error message
+            setMessages(prev => {
+              const updatedMessages = [...prev];
+              const messageIndex = updatedMessages.findIndex(m => m.id === streamingMessageId);
+              
+              if (messageIndex !== -1) {
+                updatedMessages[messageIndex] = {
+                  ...updatedMessages[messageIndex],
+                  content: errorMessage,
+                  sender: 'system'
+                };
+              }
+              
+              return updatedMessages;
+            });
+          }
+        );
+      } catch (err) {
+        setIsLoading(false);
+        error('Exception in streaming response', err);
+        
+        // Replace the streaming message with an error message
+        setMessages(prev => {
+          const updatedMessages = [...prev];
+          const messageIndex = updatedMessages.findIndex(m => m.id === streamingMessageId);
+          
+          if (messageIndex !== -1) {
+            updatedMessages[messageIndex] = {
+              ...updatedMessages[messageIndex],
+              content: "I'm sorry, I encountered an error while processing your request. Please try again later.",
+              sender: 'system'
+            };
+          }
+          
+          return updatedMessages;
+        });
+      }
+    } else {
+      // Non-streaming approach
+      try {
+        // Get response from Azure OpenAI
+        info('Requesting AI response');
+        const aiResponse = await getAzureOpenAIResponse(input);
+        
+        if (!aiResponse) {
+          throw new Error('Empty response received from AI service');
+        }
+        
+        const aiMessage: Message = {
+          id: messages.length + 2,
+          content: aiResponse,
+          sender: 'ai',
+          timestamp: new Date()
+        };
+        
+        info('AI response received', { messageId: aiMessage.id, contentLength: aiResponse.length });
+        setMessages(prev => [...prev, aiMessage]);
+      } catch (err: any) {
+        error('Error getting AI response', { 
+          error: err.message || 'Unknown error',
+          stack: err.stack
+        });
+        
+        // Add error message
+        const errorMessage: Message = {
+          id: messages.length + 2,
+          content: "I'm sorry, I encountered an error while processing your request. Please try again later or check the debug panel for more information.",
+          sender: 'system',
+          timestamp: new Date()
+        };
+        
+        setMessages(prev => [...prev, errorMessage]);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
   
@@ -149,6 +257,20 @@ export default function Assistant() {
       });
   };
   
+  const handleExampleClick = (example: string) => {
+    setInput(example);
+    // Optional: Auto-send the example
+    // setTimeout(() => {
+    //   handleSendMessage();
+    // }, 100);
+  };
+  
+  const toggleStreaming = () => {
+    setUseStreaming(prev => !prev);
+    debug(`Streaming ${!useStreaming ? 'enabled' : 'disabled'}`);
+    toast.info(`Streaming ${!useStreaming ? 'enabled' : 'disabled'}`);
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -167,6 +289,14 @@ export default function Assistant() {
             {connectionStatus === 'connected' ? 'Connected' : 
              connectionStatus === 'error' ? 'Connection Error' : 'Checking...'}
           </span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={toggleStreaming}
+            className="ml-2"
+          >
+            {useStreaming ? 'Disable Streaming' : 'Enable Streaming'}
+          </Button>
           <Button 
             variant="outline" 
             size="sm" 
@@ -229,7 +359,7 @@ export default function Assistant() {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[500px] px-4 py-2 border-y">
+            <ScrollArea className="h-[500px] px-4 py-2 border-y" ref={scrollAreaRef}>
               <div className="space-y-4 py-4">
                 {messages.map(message => (
                   <div 
@@ -265,7 +395,7 @@ export default function Assistant() {
                     </div>
                   </div>
                 ))}
-                {isLoading && (
+                {isLoading && !useStreaming && (
                   <div className="flex justify-start">
                     <div className="max-w-[80%] rounded-lg p-4 bg-muted">
                       <p className="text-sm flex items-center gap-2">
@@ -276,8 +406,25 @@ export default function Assistant() {
                     </div>
                   </div>
                 )}
+                <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
+            
+            {/* Example queries */}
+            <div className="p-3 border-b flex flex-wrap gap-2 justify-center">
+              {exampleQueries.map((example, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs flex items-center gap-1"
+                  onClick={() => handleExampleClick(example.text)}
+                >
+                  {example.icon}
+                  {example.text}
+                </Button>
+              ))}
+            </div>
             
             <div className="p-4 flex gap-2">
               <Input 
@@ -293,7 +440,7 @@ export default function Assistant() {
                 disabled={!input.trim() || isLoading || connectionStatus === 'error'}
                 className="bg-portal-secondary hover:bg-portal-secondary/90"
               >
-                {isLoading ? (
+                {isLoading && !useStreaming ? (
                   <span className="animate-spin">◌</span>
                 ) : (
                   <Send className="h-4 w-4" />
