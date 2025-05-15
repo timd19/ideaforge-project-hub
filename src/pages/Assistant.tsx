@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { getAzureOpenAIResponse, streamAzureOpenAIResponse } from '@/services/azureOpenAI';
 import { debug, error, info, getLogs, exportLogs } from '@/utils/logger';
 import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   id: number;
@@ -382,9 +383,15 @@ export default function Assistant() {
                         <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
                       )}
                       <div>
-                        <p className={`${message.sender === 'system' ? 'text-sm' : 'text-sm'}`}>
-                          {message.content}
-                        </p>
+                        <div className={`${message.sender === 'system' ? 'text-sm' : 'text-sm'} markdown-content`}>
+                          {message.sender === 'ai' ? (
+                            <ReactMarkdown>
+                              {message.content}
+                            </ReactMarkdown>
+                          ) : (
+                            <p>{message.content}</p>
+                          )}
+                        </div>
                         <p className={`text-xs mt-1 ${
                           message.sender === 'user' ? 'text-blue-100' : 
                           message.sender === 'system' ? 'text-amber-600' : 'text-muted-foreground'
