@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { getAzureOpenAIResponse, streamAzureOpenAIResponse } from '@/services/azureOpenAI';
 import { debug, error, info, getLogs, exportLogs } from '@/utils/logger';
 import { toast } from 'sonner';
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
 
 interface Message {
   id: number;
@@ -361,40 +362,51 @@ export default function Assistant() {
           <CardContent className="p-0">
             <ScrollArea className="h-[500px] px-4 py-2 border-y" ref={scrollAreaRef}>
               <div className="space-y-4 py-4">
-                {messages.map(message => (
-                  <div 
-                    key={message.id}
-                    className={`flex ${
-                      message.sender === 'user' ? 'justify-end' : 
-                      message.sender === 'system' ? 'justify-center' : 'justify-start'
-                    }`}
-                  >
+                {messages.map(message => {
+                  const isStreaming = message.sender === 'ai' && isLoading && message.id === messages[messages.length - 1].id;
+                  
+                  return (
                     <div 
-                      className={`${
-                        message.sender === 'user' 
-                          ? 'max-w-[80%] bg-portal-primary text-white rounded-lg p-4' : 
-                        message.sender === 'system'
-                          ? 'max-w-[90%] bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 flex items-start gap-2'
-                          : 'max-w-[80%] bg-muted rounded-lg p-4'
+                      key={message.id}
+                      className={`flex ${
+                        message.sender === 'user' ? 'justify-end' : 
+                        message.sender === 'system' ? 'justify-center' : 'justify-start'
                       }`}
                     >
-                      {message.sender === 'system' && (
-                        <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                      )}
-                      <div>
-                        <p className={`${message.sender === 'system' ? 'text-sm' : 'text-sm'}`}>
-                          {message.content}
-                        </p>
-                        <p className={`text-xs mt-1 ${
-                          message.sender === 'user' ? 'text-blue-100' : 
-                          message.sender === 'system' ? 'text-amber-600' : 'text-muted-foreground'
-                        }`}>
-                          {formatTimestamp(message.timestamp)}
-                        </p>
+                      <div 
+                        className={`${
+                          message.sender === 'user' 
+                            ? 'max-w-[80%] bg-portal-primary text-white rounded-lg p-4' : 
+                          message.sender === 'system'
+                            ? 'max-w-[90%] bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 flex items-start gap-2'
+                            : 'max-w-[80%] bg-muted rounded-lg p-4'
+                        }`}
+                      >
+                        {message.sender === 'system' && (
+                          <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                        )}
+                        <div>
+                          <div className="message-content">
+                            {message.sender === 'ai' ? (
+                              <MarkdownRenderer 
+                                content={message.content} 
+                                isStreaming={isStreaming} 
+                              />
+                            ) : (
+                              <p>{message.content}</p>
+                            )}
+                          </div>
+                          <p className={`text-xs mt-1 ${
+                            message.sender === 'user' ? 'text-blue-100' : 
+                            message.sender === 'system' ? 'text-amber-600' : 'text-muted-foreground'
+                          }`}>
+                            {formatTimestamp(message.timestamp)}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {isLoading && !useStreaming && (
                   <div className="flex justify-start">
                     <div className="max-w-[80%] rounded-lg p-4 bg-muted">

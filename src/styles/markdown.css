@@ -1,0 +1,249 @@
+/* Markdown Content Styling */
+.markdown-content {
+  /* Base styles */
+  line-height: 1.6;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  font-size: 0.95rem;
+  color: inherit;
+}
+
+/* Headings */
+.markdown-content h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.markdown-content h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.2rem;
+}
+
+.markdown-content h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content h4, 
+.markdown-content h5, 
+.markdown-content h6 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Paragraphs and spacing */
+.markdown-content p {
+  margin-bottom: 0.75rem;
+  white-space: pre-wrap;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Lists */
+.markdown-content ul,
+.markdown-content ol {
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown-content ul {
+  list-style-type: disc;
+}
+
+.markdown-content ol {
+  list-style-type: decimal;
+}
+
+.markdown-content ul ul,
+.markdown-content ol ul {
+  list-style-type: circle;
+}
+
+.markdown-content ul ul ul,
+.markdown-content ol ul ul {
+  list-style-type: square;
+}
+
+/* Code blocks */
+.markdown-content pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 0.25rem;
+  padding: 0.75rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.875em;
+}
+
+.markdown-content code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+.markdown-content pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  color: inherit;
+}
+
+/* Blockquotes */
+.markdown-content blockquote {
+  border-left: 4px solid rgba(0, 0, 0, 0.1);
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-right: 0;
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+/* Links */
+.markdown-content a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.markdown-content a:hover {
+  text-decoration: none;
+}
+
+/* Tables */
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0;
+  font-size: 0.9em;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.markdown-content th {
+  background-color: rgba(0, 0, 0, 0.05);
+  font-weight: 600;
+}
+
+.markdown-content tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Horizontal rule */
+.markdown-content hr {
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  margin: 1rem 0;
+}
+
+/* Images */
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.25rem;
+}
+
+/* Checkboxes in lists */
+.markdown-content input[type="checkbox"] {
+  margin-right: 0.5rem;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .markdown-content blockquote {
+    border-left-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .markdown-content code,
+  .markdown-content pre {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  .markdown-content th,
+  .markdown-content td {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .markdown-content th {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  .markdown-content tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.02);
+  }
+  
+  .markdown-content hr {
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Ensure proper spacing in lists */
+.markdown-content ul li p,
+.markdown-content ol li p {
+  margin-bottom: 0.25rem;
+}
+
+/* Fix for nested lists */
+.markdown-content ul li ul,
+.markdown-content ol li ul,
+.markdown-content ul li ol,
+.markdown-content ol li ol {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Ensure code blocks don't overflow */
+.markdown-content pre {
+  max-width: 100%;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Streaming cursor animation */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.streaming-cursor {
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  background-color: currentColor;
+  margin-left: 2px;
+  animation: blink 1s step-end infinite;
+}
+
+/* Ensure proper spacing between elements */
+.markdown-content > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-content > *:last-child {
+  margin-bottom: 0;
+}
+
