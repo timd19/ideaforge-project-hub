@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import './styles/markdown.css'
 import { initLogger, error, LogLevel } from './utils/logger'
 
 // Initialize logger with debug level in development
